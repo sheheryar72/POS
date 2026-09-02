@@ -1,0 +1,31 @@
+{% extends 'orders/base.html' %}
+{% load static %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h2>Today's Summary</h2>
+<div class="stat-cards">
+    <div class="stat-card">
+        <span class="stat-label">Total Orders</span>
+        <span class="stat-value" id="stat-total-orders">-</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total Revenue</span>
+        <span class="stat-value" id="stat-total-revenue">-</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Pending</span>
+        <span class="stat-value" id="stat-pending">-</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">In Progress</span>
+        <span class="stat-value" id="stat-in-progress">-</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Completed</span>
+        <span class="stat-value" id="stat-completed">-</span>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

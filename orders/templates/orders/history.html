@@ -1,0 +1,42 @@
+{% extends 'orders/base.html' %}
+{% load static %}
+{% block title %}Order History{% endblock %}
+{% block content %}
+<div class="history-header">
+    <h2>Order History</h2>
+    <div class="history-filters">
+        <label>Date <input type="date" id="filter-date"></label>
+        <label>Status
+            <select id="filter-status">
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </label>
+    </div>
+</div>
+<div class="table-scroll">
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Invoice</th><th>Type</th><th>Status</th><th>Total</th><th>Time</th><th></th>
+            </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+    </table>
+</div>
+
+<div id="order-detail-modal" class="modal-overlay" style="display:none">
+    <div class="modal receipt-modal">
+        <div id="order-detail-content"></div>
+        <div class="modal-actions">
+            <button id="close-detail-btn">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/history.js' %}"></script>
+{% endblock %}

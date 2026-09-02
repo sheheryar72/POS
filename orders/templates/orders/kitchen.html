@@ -1,0 +1,13 @@
+{% extends 'orders/base.html' %}
+{% load static %}
+{% block title %}Kitchen{% endblock %}
+{% block content %}
+<div class="kitchen-header">
+    <h2>Kitchen Queue</h2>
+    <span class="auto-refresh-note">Auto-refreshes every 10s</span>
+</div>
+<div id="kitchen-board" class="kitchen-board"></div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/kitchen.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}POS{% endblock %} — {{ restaurant.name }}</title>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="{% static 'css/pos.css' %}">
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+<div class="mobile-topbar">
+    <button id="sidebar-toggle" class="hamburger-btn" aria-label="Open menu">☰</button>
+    <span class="brand">{{ restaurant.name }}</span>
+</div>
+<div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+<nav id="app-sidebar" class="app-sidebar">
+    <div class="sidebar-top">
+        <div class="sidebar-brand">
+            <span class="sidebar-brand-full">{{ restaurant.name }}</span>
+            <span class="sidebar-brand-short">{{ restaurant.name|slice:":2"|upper }}</span>
+        </div>
+        <button id="sidebar-collapse-toggle" class="sidebar-collapse-btn" aria-label="Collapse sidebar" title="Collapse sidebar">
+            <span class="collapse-icon-left">«</span><span class="collapse-icon-right">»</span>
+        </button>
+    </div>
+    <div class="sidebar-section-label">Menu</div>
+    <a href="{% url 'pos_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'pos_screen' %} active{% endif %}" title="New Order">
+        <span class="sidebar-icon">🧾</span><span class="sidebar-text">New Order</span>
+    </a>
+    <a href="{% url 'kitchen_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'kitchen_screen' %} active{% endif %}" title="Kitchen">
+        <span class="sidebar-icon">🍳</span><span class="sidebar-text">Kitchen</span>
+    </a>
+    <a href="{% url 'orders_history_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'orders_history_screen' %} active{% endif %}" title="History">
+        <span class="sidebar-icon">📋</span><span class="sidebar-text">History</span>
+    </a>
+    <a href="{% url 'dashboard_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'dashboard_screen' %} active{% endif %}" title="Dashboard">
+        <span class="sidebar-icon">📊</span><span class="sidebar-text">Dashboard</span>
+    </a>
+    <a href="{% url 'menu_manage_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'menu_manage_screen' %} active{% endif %}" title="Manage Menu">
+        <span class="sidebar-icon">🍽️</span><span class="sidebar-text">Manage Menu</span>
+    </a>
+
+    {% block sidebar_extra %}{% endblock %}
+
+    <div class="sidebar-footer">
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="sidebar-link sidebar-logout-btn" title="Logout">
+                <span class="sidebar-icon">⏻</span><span class="sidebar-text">Logout ({{ user.username }})</span>
+            </button>
+        </form>
+    </div>
+</nav>
+{% endif %}
+<main class="content{% if user.is_authenticated %} content-with-sidebar{% endif %}">
+{% block content %}{% endblock %}
+</main>
+<script>
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+    window.CURRENCY = "{{ restaurant.currency_symbol }}";
+    window.TAX_PERCENT = "{{ restaurant.tax_percent }}";
+    window.RESTAURANT_NAME_JS = "{{ restaurant.name|default:''|escapejs }}";
+</script>
+<script>
+    $(function () {
+        var $body = $('body');
+        var $sidebar = $('#app-sidebar');
+
+        // Mobile slide-in toggle
+        $('#sidebar-toggle').on('click', function () {
+            $sidebar.toggleClass('open');
+            $('#sidebar-backdrop').toggleClass('open');
+        });
+        $('#sidebar-backdrop').on('click', function () {
+            $sidebar.removeClass('open');
+            $('#sidebar-backdrop').removeClass('open');
+        });
+
+        // Desktop collapse toggle (persisted)
+        try {
+            if (localStorage.getItem('sidebarCollapsed') === '1') {
+                $body.addClass('sidebar-collapsed');
+            }
+        } catch (e) {}
+
+        $('#sidebar-collapse-toggle').on('click', function () {
+            $body.toggleClass('sidebar-collapsed');
+            try {
+                localStorage.setItem('sidebarCollapsed', $body.hasClass('sidebar-collapsed') ? '1' : '0');
+            } catch (e) {}
+        });
+    });
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

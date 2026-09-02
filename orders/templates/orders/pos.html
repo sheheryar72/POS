@@ -1,0 +1,74 @@
+{% extends 'orders/base.html' %}
+{% load static %}
+{% block title %}New Order{% endblock %}
+{% block content %}
+<div class="pos-layout">
+    <section class="menu-pane">
+        <nav id="category-tabs" class="category-topbar"></nav>
+        <div id="item-grid" class="item-grid"></div>
+    </section>
+
+    <aside class="cart-pane">
+        <h2>Current Order</h2>
+
+        <div class="order-meta">
+            <label>Order Type</label>
+            <select id="order-type">
+                <option value="dine_in">Dine-in</option>
+                <option value="takeaway">Takeaway</option>
+                <option value="delivery">Delivery</option>
+            </select>
+
+            <div id="customer-field" class="meta-field" style="display:none">
+                <label>Customer Name</label>
+                <input type="text" id="customer-name" placeholder="Customer name">
+                <label>Phone</label>
+                <input type="text" id="customer-phone" placeholder="Phone number">
+            </div>
+            <div id="address-field" class="meta-field" style="display:none">
+                <label>Delivery Address</label>
+                <input type="text" id="delivery-address" placeholder="Delivery address">
+            </div>
+        </div>
+
+        <div id="cart-lines" class="cart-lines"></div>
+
+        <div class="discount-row">
+            <label>Discount</label>
+            <select id="discount-type">
+                <option value="none">None</option>
+                <option value="flat">Flat</option>
+                <option value="percent">Percent %</option>
+            </select>
+            <input type="number" id="discount-value" min="0" step="0.01" value="0">
+        </div>
+
+        <div class="totals">
+            <div class="totals-row"><span>Subtotal</span><span id="totals-subtotal">0.00</span></div>
+            <div class="totals-row"><span>Discount</span><span id="totals-discount">0.00</span></div>
+            <div class="totals-row"><span>Tax</span><span id="totals-tax">0.00</span></div>
+            <div class="totals-row totals-grand"><span>Total</span><span id="totals-total">0.00</span></div>
+        </div>
+
+        <div class="payment-row">
+            <span>Payment: Cash</span>
+        </div>
+
+        <button id="place-order-btn" class="primary-btn" disabled>Punch Order</button>
+        <div id="cart-error" class="error-text"></div>
+    </aside>
+</div>
+
+<div id="receipt-modal" class="modal-overlay" style="display:none">
+    <div class="modal receipt-modal">
+        <div id="receipt-content"></div>
+        <div class="modal-actions">
+            <button id="print-receipt-btn">Print</button>
+            <button id="new-order-btn" class="primary-btn">New Order</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/pos.js' %}"></script>
+{% endblock %}
