@@ -6,8 +6,38 @@ $(function () {
     }
 
     function loadQueue() {
+        if (!navigator.onLine) {
+            return renderOfflineOnly();
+        }
         ajax({ url: '/api/orders/queue/', method: 'GET' }).done(function (res) {
-            renderBoard(res.orders);
+            renderPendingSyncThenBoard(res.orders);
+        }).fail(function () {
+            renderOfflineOnly();
+        });
+    }
+
+    // Kitchen view = server's active queue + any locally-created orders that
+    // haven't synced yet. A not-yet-synced order has no server-assigned id,
+    // so its status buttons stay disabled until posSync confirms it exists
+    // server-side (see the "orders_synced" cleanup below).
+    function renderPendingSyncThenBoard(serverOrders) {
+        posDb.getAllOrders().then(function (localOrders) {
+            var pendingLocal = localOrders.filter(function (o) {
+                return o.status === 'PENDING_SYNC' || o.status === 'FAILED';
+            });
+            renderBoard(pendingLocal.concat(serverOrders));
+        }).catch(function () {
+            renderBoard(serverOrders);
+        });
+    }
+
+    function renderOfflineOnly() {
+        posDb.getAllOrders().then(function (localOrders) {
+            var pendingLocal = localOrders.filter(function (o) {
+                return o.status === 'PENDING_SYNC' || o.status === 'FAILED';
+            });
+            $('#kitchen-offline-note').show();
+            renderBoard(pendingLocal);
         });
     }
 
@@ -18,10 +48,13 @@ $(function () {
             return;
         }
         orders.forEach(function (order) {
-            var $card = $('<div class="kitchen-card"></div>').addClass('status-' + order.status);
+            var isPendingSync = !!order.is_offline;
+            var statusKey = isPendingSync ? 'pending_sync' : order.status;
+            var $card = $('<div class="kitchen-card"></div>').addClass('status-' + statusKey);
+
             var $header = $('<div class="kitchen-card-header"></div>');
             $header.append($('<span></span>').text(order.invoice_number));
-            $header.append($('<span></span>').text(order.status_display));
+            $header.append($('<span></span>').text(isPendingSync ? 'Pending Sync' : order.status_display));
             $card.append($header);
 
             $card.append($('<div class="kitchen-card-meta"></div>').text(order.order_type_display));
@@ -33,13 +66,19 @@ $(function () {
             });
 
             var $actions = $('<div class="kitchen-actions"></div>');
-            if (order.status === 'pending') {
-                $actions.append(actionBtn('Start', 'btn-progress', order.id, 'in_progress'));
+            if (isPendingSync) {
+                $actions.append(
+                    $('<span class="pending-sync-note"></span>').text('Waiting to sync — actions unlock once confirmed')
+                );
+            } else {
+                if (order.status === 'pending') {
+                    $actions.append(actionBtn('Start', 'btn-progress', order.id, 'in_progress'));
+                }
+                if (order.status === 'in_progress') {
+                    $actions.append(actionBtn('Complete', 'btn-complete', order.id, 'completed'));
+                }
+                $actions.append(actionBtn('Cancel', 'btn-cancel', order.id, 'cancelled'));
             }
-            if (order.status === 'in_progress') {
-                $actions.append(actionBtn('Complete', 'btn-complete', order.id, 'completed'));
-            }
-            $actions.append(actionBtn('Cancel', 'btn-cancel', order.id, 'cancelled'));
             $card.append($actions);
 
             $board.append($card);
@@ -60,6 +99,21 @@ $(function () {
             data: JSON.stringify({ status: status })
         }).done(function () {
             loadQueue();
+        });
+    }
+
+    window.addEventListener('online', function () {
+        $('#kitchen-offline-note').hide();
+        loadQueue();
+    });
+    window.addEventListener('offline', loadQueue);
+
+    // Once an order finishes syncing elsewhere in the app (e.g. the sync
+    // engine drains the queue while this tab is open), refresh so it moves
+    // from "Pending Sync" into the normal server-driven queue.
+    if (window.posSync) {
+        posSync.onSyncEvent(function (event) {
+            if (event === 'order_synced' || event === 'sync_complete') loadQueue();
         });
     }
 

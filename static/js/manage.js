@@ -291,5 +291,22 @@ $(function () {
         });
     });
 
-    loadCategories();
+    // Manage Menu is an admin/setup function, not core order-taking — it's
+    // explicitly out of scope for offline support (multipart image uploads
+    // don't fit the JSON sync-queue model the rest of this app uses). Block
+    // the UI outright rather than let edits silently fail or get lost.
+    function applyOfflineGuard() {
+        var offline = !navigator.onLine;
+        $('#manage-offline-notice').toggle(offline);
+        $('#manage-layout-wrapper').toggle(!offline);
+        return offline;
+    }
+    window.addEventListener('online', function () {
+        if (!applyOfflineGuard()) loadCategories();
+    });
+    window.addEventListener('offline', applyOfflineGuard);
+
+    if (!applyOfflineGuard()) {
+        loadCategories();
+    }
 });

@@ -14,6 +14,7 @@ urlpatterns = [
 
     path('api/menu/', views.api_menu, name='api_menu'),
     path('api/orders/place/', views.api_place_order, name='api_place_order'),
+    path('api/orders/sync/', views.api_sync_order, name='api_sync_order'),
     path('api/orders/queue/', views.api_orders_queue, name='api_orders_queue'),
     path('api/orders/history/', views.api_orders_history, name='api_orders_history'),
     path('api/orders/<int:order_id>/', views.api_order_detail, name='api_order_detail'),

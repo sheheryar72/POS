@@ -2,6 +2,9 @@
 {% load static %}
 {% block title %}New Order{% endblock %}
 {% block content %}
+<div id="offline-mode-notice" class="offline-mode-notice" style="display:none">
+    Offline Mode — Sales will sync automatically when internet is restored.
+</div>
 <div class="pos-layout">
     <section class="menu-pane">
         <nav id="category-tabs" class="category-topbar"></nav>

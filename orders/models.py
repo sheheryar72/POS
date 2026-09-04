@@ -26,6 +26,13 @@ class Order(models.Model):
     )
     invoice_number = models.CharField(max_length=30, blank=True, db_index=True)
 
+    # Client-generated idempotency key (e.g. "POS-<device_id>-<timestamp>-<seq>").
+    # Set for every order (online or offline) so a retried/duplicated submission
+    # never creates a second Order — see orders.views.api_sync_order.
+    client_transaction_id = models.CharField(
+        max_length=64, unique=True, null=True, blank=True, db_index=True
+    )
+
     order_type = models.CharField(max_length=20, choices=OrderType.choices, default=OrderType.DINE_IN)
     customer_name = models.CharField(max_length=100, blank=True)
     customer_phone = models.CharField(max_length=30, blank=True)

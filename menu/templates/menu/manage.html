@@ -2,6 +2,10 @@
 {% load static %}
 {% block title %}Manage Menu{% endblock %}
 {% block content %}
+<div id="manage-offline-notice" class="offline-mode-notice" style="display:none">
+    Manage Menu requires an internet connection. Changes here (including image uploads) aren't queued for offline sync — please try again once you're back online.
+</div>
+<div id="manage-layout-wrapper">
 <div class="manage-layout">
     <section class="category-pane">
         <div class="pane-header">
@@ -18,6 +22,7 @@
         </div>
         <div id="items-list" class="manage-items-grid"></div>
     </section>
+</div>
 </div>
 
 <div id="category-modal" class="modal-overlay" style="display:none">

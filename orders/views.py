@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -73,6 +73,7 @@ def _serialize_order(order):
     return {
         'id': order.id,
         'invoice_number': order.invoice_number,
+        'client_transaction_id': order.client_transaction_id,
         'order_type': order.order_type,
         'order_type_display': order.get_order_type_display(),
         'customer_name': order.customer_name,
@@ -111,24 +112,53 @@ def api_place_order(request):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({'error': 'Invalid request body.'}, status=400)
 
+    order, error, status_code = _create_order_from_payload(payload, request.user)
+    if error:
+        return JsonResponse({'error': error}, status=status_code)
+
+    return JsonResponse({'order': _serialize_order(order)}, status=201)
+
+
+def _create_order_from_payload(payload, user):
+    """
+    Validates payload and creates an Order + OrderLines.
+
+    Every dollar amount (subtotal/discount/tax/total) is derived server-side
+    from OrderLine rows at read time (see Order properties) — the client
+    never sends and can never dictate a total; it only chooses variant_ids,
+    quantities, and a discount selection.
+
+    Idempotent on client_transaction_id when provided: a retried/duplicated
+    submission (e.g. an offline order re-sent after a dropped sync response)
+    returns the existing order instead of creating a second one.
+
+    Returns (order, error_message, http_status). On success error_message is None.
+    """
+    client_transaction_id = (payload.get('client_transaction_id') or '').strip()[:64] or None
+
+    if client_transaction_id:
+        existing = Order.objects.filter(client_transaction_id=client_transaction_id).first()
+        if existing:
+            return existing, None, 200
+
     items = payload.get('items') or []
     if not items:
-        return JsonResponse({'error': 'Cart is empty.'}, status=400)
+        return None, 'Cart is empty.', 400
 
     order_type = payload.get('order_type', Order.OrderType.DINE_IN)
     if order_type not in Order.OrderType.values:
-        return JsonResponse({'error': 'Invalid order type.'}, status=400)
+        return None, 'Invalid order type.', 400
 
     discount_type = payload.get('discount_type', Order.DiscountType.NONE)
     if discount_type not in Order.DiscountType.values:
-        return JsonResponse({'error': 'Invalid discount type.'}, status=400)
+        return None, 'Invalid discount type.', 400
 
     try:
         discount_value = Decimal(str(payload.get('discount_value') or '0'))
         if discount_value < 0:
             raise InvalidOperation
     except InvalidOperation:
-        return JsonResponse({'error': 'Invalid discount value.'}, status=400)
+        return None, 'Invalid discount value.', 400
 
     payment_method = 'cash'
 
@@ -142,13 +172,13 @@ def api_place_order(request):
     for entry in items:
         variant = variant_map.get(entry.get('variant_id'))
         if variant is None:
-            return JsonResponse({'error': 'One of the selected items is no longer available.'}, status=400)
+            return None, 'One of the selected items is no longer available.', 400
         try:
             quantity = int(entry.get('quantity', 1))
         except (TypeError, ValueError):
             quantity = 0
         if quantity < 1:
-            return JsonResponse({'error': 'Quantity must be at least 1.'}, status=400)
+            return None, 'Quantity must be at least 1.', 400
 
         lines_to_create.append(OrderLine(
             variant=variant,
@@ -159,26 +189,71 @@ def api_place_order(request):
             note=(entry.get('note') or '')[:255],
         ))
 
-    with transaction.atomic():
-        invoice_num = restaurant.reserve_invoice_number()
-        order = Order.objects.create(
-            restaurant=restaurant,
-            invoice_number=f'{restaurant.invoice_prefix}-{invoice_num:05d}',
-            order_type=order_type,
-            customer_name=(payload.get('customer_name') or '')[:100],
-            customer_phone=(payload.get('customer_phone') or '')[:30],
-            delivery_address=(payload.get('delivery_address') or '')[:255],
-            discount_type=discount_type,
-            discount_value=discount_value,
-            tax_percent=restaurant.tax_percent,
-            payment_method=payment_method,
-            created_by=request.user,
-        )
-        for line in lines_to_create:
-            line.order = order
-        OrderLine.objects.bulk_create(lines_to_create)
+    try:
+        with transaction.atomic():
+            invoice_num = restaurant.reserve_invoice_number()
+            order = Order.objects.create(
+                restaurant=restaurant,
+                invoice_number=f'{restaurant.invoice_prefix}-{invoice_num:05d}',
+                client_transaction_id=client_transaction_id,
+                order_type=order_type,
+                customer_name=(payload.get('customer_name') or '')[:100],
+                customer_phone=(payload.get('customer_phone') or '')[:30],
+                delivery_address=(payload.get('delivery_address') or '')[:255],
+                discount_type=discount_type,
+                discount_value=discount_value,
+                tax_percent=restaurant.tax_percent,
+                payment_method=payment_method,
+                created_by=user,
+            )
+            for line in lines_to_create:
+                line.order = order
+            OrderLine.objects.bulk_create(lines_to_create)
+    except IntegrityError:
+        # Lost a race against a concurrent sync retry with the same
+        # client_transaction_id — the other request already created it.
+        existing = Order.objects.filter(client_transaction_id=client_transaction_id).first()
+        if existing:
+            return existing, None, 200
+        raise
 
-    return JsonResponse({'order': _serialize_order(order)}, status=201)
+    return order, None, 201
+
+
+@login_required
+@require_POST
+def api_sync_order(request):
+    """
+    Offline-sync endpoint: same validation/creation as api_place_order, but
+    requires client_transaction_id and always reports whether this call
+    created the order or found it already synced.
+    """
+    try:
+        payload = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid request body.'}, status=400)
+
+    client_transaction_id = (payload.get('client_transaction_id') or '').strip()
+    if not client_transaction_id:
+        return JsonResponse({'error': 'client_transaction_id is required for sync.'}, status=400)
+
+    already_existed = Order.objects.filter(client_transaction_id=client_transaction_id).exists()
+
+    order, error, status_code = _create_order_from_payload(payload, request.user)
+    if error:
+        return JsonResponse({
+            'client_transaction_id': client_transaction_id,
+            'status': 'error',
+            'error': error,
+        }, status=status_code)
+
+    return JsonResponse({
+        'client_transaction_id': client_transaction_id,
+        'server_id': order.id,
+        'invoice_number': order.invoice_number,
+        'status': 'already_synced' if already_existed else 'synced',
+        'order': _serialize_order(order),
+    }, status=200 if already_existed else 201)
 
 
 @login_required

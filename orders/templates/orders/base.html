@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}POS{% endblock %} — {{ restaurant.name }}</title>
+<link rel="manifest" href="{% static 'manifest.json' %}">
+<meta name="theme-color" content="#7a1414">
+<link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}">
+<link rel="icon" href="{% static 'icons/icon-32.png' %}">
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <link rel="stylesheet" href="{% static 'css/pos.css' %}">
 {% block extra_head %}{% endblock %}
@@ -13,6 +17,7 @@
 <div class="mobile-topbar">
     <button id="sidebar-toggle" class="hamburger-btn" aria-label="Open menu">☰</button>
     <span class="brand">{{ restaurant.name }}</span>
+    <span id="connection-status" class="connection-status" title="Connection status"></span>
 </div>
 <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 <nav id="app-sidebar" class="app-sidebar">
@@ -25,6 +30,8 @@
             <span class="collapse-icon-left">«</span><span class="collapse-icon-right">»</span>
         </button>
     </div>
+    <div id="sidebar-connection-status" class="sidebar-connection-status"></div>
+    <div id="sync-banner" class="sync-banner" style="display:none"></div>
     <div class="sidebar-section-label">Menu</div>
     <a href="{% url 'pos_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'pos_screen' %} active{% endif %}" title="New Order">
         <span class="sidebar-icon">🧾</span><span class="sidebar-text">New Order</span>
@@ -91,8 +98,70 @@
                 localStorage.setItem('sidebarCollapsed', $body.hasClass('sidebar-collapsed') ? '1' : '0');
             } catch (e) {}
         });
+
+        function renderConnectionStatus() {
+            var online = navigator.onLine;
+            var label = online ? '● Online' : '● Offline';
+            $('#connection-status, #sidebar-connection-status')
+                .text(label)
+                .toggleClass('is-online', online)
+                .toggleClass('is-offline', !online);
+        }
+        window.addEventListener('online', renderConnectionStatus);
+        window.addEventListener('offline', renderConnectionStatus);
+        renderConnectionStatus();
     });
 </script>
+{% if user.is_authenticated %}
+<script src="{% static 'js/idb.js' %}"></script>
+<script src="{% static 'js/posSync.js' %}"></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function (err) {
+                console.error('Service worker registration failed:', err);
+            });
+        });
+    }
+
+    (function () {
+        var $banner = $('#sync-banner');
+        var hideTimer = null;
+
+        function showBanner(text, cls) {
+            clearTimeout(hideTimer);
+            $banner.removeClass('syncing success error').addClass(cls).text(text).show();
+        }
+
+        function showBannerTemporary(text, cls, ms) {
+            showBanner(text, cls);
+            hideTimer = setTimeout(function () { $banner.fadeOut(200); }, ms);
+        }
+
+        posSync.onSyncEvent(function (event, data) {
+            if (event === 'sync_start') {
+                showBanner('Synchronizing…', 'syncing');
+            } else if (event === 'sync_complete') {
+                if (data.synced > 0 && data.failed === 0) {
+                    showBannerTemporary('All transactions synchronized.', 'success', 4000);
+                } else if (data.failed > 0) {
+                    showBannerTemporary('Some transactions could not be synchronized.', 'error', 6000);
+                } else {
+                    $banner.hide();
+                }
+            } else if (event === 'sync_idle') {
+                $banner.hide();
+            }
+        });
+
+        // If there's already a pending queue on page load (e.g. reopened
+        // after being offline), try syncing right away when online.
+        $(function () {
+            if (navigator.onLine) posSync.runSync();
+        });
+    })();
+</script>
+{% endif %}
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

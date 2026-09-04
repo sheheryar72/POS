@@ -10,11 +10,33 @@ $(function () {
     }
 
     function loadMenu() {
+        if (!navigator.onLine) {
+            return loadMenuOffline();
+        }
         ajax({ url: '/api/menu/', method: 'GET' }).done(function (res) {
             menuData = res.categories;
             renderCategoryTabs();
             if (menuData.length) {
                 selectCategory(menuData[0].id);
+            }
+            // Mirror into IndexedDB so New Order keeps working if connectivity
+            // drops later in this same session.
+            posDb.saveMenu(res.categories).catch(function () {});
+        }).fail(function () {
+            // Online per navigator.onLine but the request still failed
+            // (e.g. server unreachable) — fall back to the cached menu.
+            loadMenuOffline();
+        });
+    }
+
+    function loadMenuOffline() {
+        posDb.loadMenuFromCache().then(function (categories) {
+            menuData = categories;
+            renderCategoryTabs();
+            if (menuData.length) {
+                selectCategory(menuData[0].id);
+            } else {
+                $('#item-grid').html('<p style="color:#888">No menu available offline yet — connect to the internet once to load it.</p>');
             }
         });
     }
@@ -171,18 +193,13 @@ $(function () {
             })
         };
 
-        ajax({
-            url: '/api/orders/place/',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(payload)
-        }).done(function (res) {
-            showReceipt(res.order);
+        posSync.placeOrder(payload).then(function (result) {
+            showReceipt(result.order, result.source === 'offline');
             resetOrderForm();
-        }).fail(function (xhr) {
-            var msg = (xhr.responseJSON && xhr.responseJSON.error) || 'Something went wrong.';
+        }, function (xhr) {
+            var msg = (xhr && xhr.responseJSON && xhr.responseJSON.error) || 'Something went wrong.';
             $('#cart-error').text(msg);
-        }).always(function () {
+        }).finally(function () {
             $('#place-order-btn').prop('disabled', cart.length === 0).text('Punch Order');
         });
     });
@@ -195,10 +212,13 @@ $(function () {
         renderCart();
     }
 
-    function showReceipt(order) {
+    function showReceipt(order, isPendingSync) {
         var $content = $('#receipt-content').empty();
         $content.append('<h3>' + window.RESTAURANT_NAME_JS + '</h3>');
-        $content.append('<div class="receipt-meta" style="text-align:center">' + order.invoice_number + '<br>' + order.created_at + '</div>');
+        if (isPendingSync) {
+            $content.append('<div class="pending-sync-badge">⏳ Offline Order — Pending Sync</div>');
+        }
+        $content.append('<div class="receipt-meta" style="text-align:center">' + order.invoice_number + '<br>' + formatReceiptTimestamp(order.created_at) + '</div>');
         $content.append('<div class="receipt-meta">' + order.order_type_display + '</div>');
         $content.append('<div class="receipt-divider"></div>');
 
@@ -222,6 +242,17 @@ $(function () {
         $('#receipt-modal').css('display', 'flex');
     }
 
+    function formatReceiptTimestamp(value) {
+        // Server sends "YYYY-MM-DD HH:MM" already formatted; offline orders
+        // store a raw ISO string (new Date().toISOString()) — normalize both
+        // to the same display format.
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(value)) return value;
+        var d = new Date(value);
+        if (isNaN(d.getTime())) return value;
+        var pad = function (n) { return String(n).padStart(2, '0'); };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
     function receiptRow(label, value) {
         var $row = $('<div class="receipt-line"></div>');
         $row.append($('<span></span>').text(label));
@@ -236,6 +267,16 @@ $(function () {
     $('#new-order-btn').on('click', function () {
         $('#receipt-modal').hide();
     });
+
+    function renderOfflineNotice() {
+        $('#offline-mode-notice').toggle(!navigator.onLine);
+    }
+    window.addEventListener('online', function () {
+        renderOfflineNotice();
+        loadMenu(); // refresh with the authoritative server menu now that we're back
+    });
+    window.addEventListener('offline', renderOfflineNotice);
+    renderOfflineNotice();
 
     loadMenu();
 });
