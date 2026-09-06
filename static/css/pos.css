@@ -281,8 +281,9 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
 .item-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .item-card .item-image {
     width: 100%; height: 125px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 10px;
-    background: var(--bg);
+    background: var(--bg); cursor: pointer; transition: opacity 0.12s ease;
 }
+.item-card .item-image:hover { opacity: 0.88; }
 .item-card .item-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
 .item-card .item-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
 .item-card .variant-btn {
@@ -357,7 +358,10 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
     background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600;
 }
 .modal-actions button:hover { background: var(--bg); }
-.modal-actions .primary-btn { border: none; }
+.modal-actions .primary-btn { border: none; width: auto; flex: 1; background: var(--success); color: #fff; }
+.modal-actions .primary-btn:hover:not(:disabled) { background: #15803d; }
+.modal-actions .danger-btn { flex: 1; background: var(--danger); color: #fff; border: none; }
+.modal-actions .danger-btn:hover { background: var(--primary-dark); }
 
 .receipt-modal h3 { text-align: center; margin-bottom: 4px; }
 .pending-sync-badge {

@@ -75,7 +75,12 @@ $(function () {
         cat.items.forEach(function (item) {
             var $card = $('<div class="item-card"></div>');
             if (item.image_url) {
-                $card.append($('<img class="item-image">').attr('src', item.image_url).attr('alt', item.name));
+                var $img = $('<img class="item-image">').attr('src', item.image_url).attr('alt', item.name);
+                $img.attr('title', 'Add ' + item.name + (item.variants.length > 1 ? ' (' + item.variants[0].name + ')' : ''));
+                $img.on('click', function () {
+                    if (item.variants.length) addToCart(item, item.variants[0]);
+                });
+                $card.append($img);
             }
             $card.append($('<div class="item-name"></div>').text(item.name));
             if (item.description) {
