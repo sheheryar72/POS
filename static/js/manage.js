@@ -114,7 +114,7 @@ $(function () {
     }
 
     $('#add-category-btn').on('click', function () { openCategoryModal(null); });
-    $('#category-cancel-btn').on('click', function () { $('#category-modal').hide(); });
+    $('#category-cancel-btn, #category-close-x').on('click', function () { $('#category-modal').hide(); });
 
     $('#category-save-btn').on('click', function () {
         var name = $('#category-name-input').val().trim();
@@ -169,15 +169,45 @@ $(function () {
 
     /* ---------- Item modal ---------- */
     function addVariantRow(variant) {
+        var $wrap = $('<div class="variant-row-wrap"></div>');
         var $row = $('<div class="variant-row"></div>');
         var $name = $('<input type="text" placeholder="Variant name (e.g. Full)">').val(variant ? variant.name : '');
         var $price = $('<input type="number" min="0" step="0.01" placeholder="Price">').val(variant ? variant.price : '');
         var $remove = $('<span class="remove-variant">✕</span>').on('click', function () {
-            $row.remove();
+            $wrap.remove();
         });
         if (variant && variant.id) $row.data('variant-id', variant.id);
         $row.append($name, $price, $remove);
-        $('#variant-rows').append($row);
+
+        var $stockRow = $('<div class="variant-stock-row"></div>');
+        var isEditingExisting = !!(variant && variant.id);
+        var $trackCheckbox = $('<input type="checkbox" class="variant-track-stock">')
+            .prop('checked', variant ? !!variant.track_stock : false);
+        var $qtyInput = $('<input type="number" class="variant-stock-qty" placeholder="Stock qty">')
+            .val(variant && variant.track_stock ? variant.stock_quantity : '')
+            .prop('disabled', isEditingExisting);
+        if (isEditingExisting) {
+            $qtyInput.attr('title', 'Use Inventory → Stock Adjustment to change stock for an existing item.');
+        }
+        var $thresholdInput = $('<input type="number" class="variant-low-threshold" placeholder="Low stock at">')
+            .val(variant && variant.low_stock_threshold ? variant.low_stock_threshold : '');
+
+        function toggleStockInputs() {
+            var on = $trackCheckbox.is(':checked');
+            $qtyInput.toggle(on && !isEditingExisting);
+            $thresholdInput.toggle(on);
+        }
+        $trackCheckbox.on('change', toggleStockInputs);
+
+        $stockRow.append(
+            $('<label class="variant-track-label"></label>').append($trackCheckbox, ' Track stock'),
+            $qtyInput,
+            $thresholdInput
+        );
+        toggleStockInputs();
+
+        $wrap.append($row, $stockRow);
+        $('#variant-rows').append($wrap);
     }
 
     function openItemModal(item) {
@@ -211,7 +241,7 @@ $(function () {
         openItemModal(null);
     });
 
-    $('#item-cancel-btn').on('click', function () { $('#item-modal').hide(); });
+    $('#item-cancel-btn, #item-close-x').on('click', function () { $('#item-modal').hide(); });
 
     $('#add-variant-row-btn').on('click', function () { addVariantRow(null); });
 
@@ -228,8 +258,9 @@ $(function () {
     function collectVariants() {
         var variants = [];
         var valid = true;
-        $('#variant-rows .variant-row').each(function () {
-            var $row = $(this);
+        $('#variant-rows .variant-row-wrap').each(function () {
+            var $wrap = $(this);
+            var $row = $wrap.find('.variant-row');
             var name = $row.find('input[type="text"]').val().trim() || 'Regular';
             var price = $row.find('input[type="number"]').val();
             if (price === '' || isNaN(price) || parseFloat(price) < 0) {
@@ -239,6 +270,17 @@ $(function () {
             var v = { name: name, price: parseFloat(price) };
             var vid = $row.data('variant-id');
             if (vid) v.id = vid;
+
+            var trackStock = $wrap.find('.variant-track-stock').is(':checked');
+            v.track_stock = trackStock;
+            if (trackStock) {
+                var threshold = $wrap.find('.variant-low-threshold').val();
+                v.low_stock_threshold = threshold === '' ? 0 : parseInt(threshold, 10);
+                if (!vid) {
+                    var qty = $wrap.find('.variant-stock-qty').val();
+                    v.stock_quantity = qty === '' ? 0 : parseInt(qty, 10);
+                }
+            }
             variants.push(v);
         });
         if (!valid || !variants.length) return null;

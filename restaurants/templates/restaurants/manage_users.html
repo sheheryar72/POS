@@ -1,0 +1,53 @@
+{% extends 'orders/base.html' %}
+{% load static %}
+{% block title %}Manage Users{% endblock %}
+{% block content %}
+<div class="pane-header">
+    <h2>Manage Users</h2>
+    <button id="add-user-btn" class="small-btn">+ Add User</button>
+</div>
+
+<div class="table-scroll">
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Username</th><th>Role</th><th>Status</th><th>Joined</th><th></th>
+            </tr>
+        </thead>
+        <tbody id="users-body"></tbody>
+    </table>
+</div>
+
+<div id="user-modal" class="modal-overlay" style="display:none">
+    <div class="modal item-modal">
+        <button type="button" id="user-close-x" class="modal-close-btn" aria-label="Close">✕</button>
+        <h3 id="user-modal-title">Add User</h3>
+
+        <label>Username</label>
+        <input type="text" id="user-username-input" placeholder="e.g. cashier1">
+
+        <label id="user-password-label">Password</label>
+        <input type="password" id="user-password-input" placeholder="At least 8 characters" autocomplete="new-password">
+
+        <label>Role</label>
+        <select id="user-role-input">
+            <option value="cashier">Cashier</option>
+            <option value="owner">Owner</option>
+        </select>
+
+        <label class="checkbox-label" id="user-active-row" style="display:none">
+            <input type="checkbox" id="user-active-input" checked> Active (can log in)
+        </label>
+
+        <div id="user-modal-error" class="error-text"></div>
+        <div class="modal-actions">
+            <button id="user-cancel-btn">Cancel</button>
+            <button id="user-delete-btn" class="danger-btn" style="display:none">Delete</button>
+            <button id="user-save-btn" class="primary-btn">Save</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/manageUsers.js' %}"></script>
+{% endblock %}

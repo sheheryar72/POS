@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from menu.models import Category, ItemVariant
-from restaurants.models import Restaurant
+from restaurants.decorators import owner_required
 
 from .models import Order, OrderLine
 
@@ -21,38 +21,47 @@ class PosLoginView(LoginView):
 
 @login_required
 def pos_screen(request):
-    restaurant = Restaurant.get_current()
-    return render(request, 'orders/pos.html', {'restaurant': restaurant})
+    return render(request, 'orders/pos.html', {'restaurant': request.restaurant})
 
 
 @login_required
 def kitchen_screen(request):
-    restaurant = Restaurant.get_current()
-    return render(request, 'orders/kitchen.html', {'restaurant': restaurant})
+    return render(request, 'orders/kitchen.html', {'restaurant': request.restaurant})
 
 
 @login_required
 def orders_history_screen(request):
-    restaurant = Restaurant.get_current()
-    return render(request, 'orders/history.html', {'restaurant': restaurant})
+    return render(request, 'orders/history.html', {'restaurant': request.restaurant})
 
 
-@login_required
+@owner_required
 def dashboard_screen(request):
-    restaurant = Restaurant.get_current()
-    return render(request, 'orders/dashboard.html', {'restaurant': restaurant})
+    return render(request, 'orders/dashboard.html', {'restaurant': request.restaurant})
 
 
 @login_required
 @require_GET
 def api_menu(request):
-    categories = Category.objects.filter(is_active=True).prefetch_related('items__variants')
+    categories = (
+        Category.objects.filter(restaurant=request.restaurant, is_active=True)
+        .prefetch_related('items__variants')
+    )
     data = []
     for cat in categories:
         items = []
         for item in cat.items.filter(is_available=True):
             variants = [
-                {'id': v.id, 'name': v.name, 'price': str(v.price)}
+                {
+                    'id': v.id,
+                    'name': v.name,
+                    'price': str(v.price),
+                    # Out-of-stock variants are still sent (shown, disabled
+                    # in the UI) rather than filtered out here — a cashier
+                    # should see an item exists but is temporarily out,
+                    # not have it silently vanish from the menu.
+                    'track_stock': v.track_stock,
+                    'is_out_of_stock': v.is_out_of_stock,
+                }
                 for v in item.variants.filter(is_available=True)
             ]
             if not variants:
@@ -112,32 +121,37 @@ def api_place_order(request):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({'error': 'Invalid request body.'}, status=400)
 
-    order, error, status_code = _create_order_from_payload(payload, request.user)
+    order, error, status_code = _create_order_from_payload(payload, request.restaurant, request.user)
     if error:
         return JsonResponse({'error': error}, status=status_code)
 
     return JsonResponse({'order': _serialize_order(order)}, status=201)
 
 
-def _create_order_from_payload(payload, user):
+def _create_order_from_payload(payload, restaurant, user):
     """
-    Validates payload and creates an Order + OrderLines.
-
-    Every dollar amount (subtotal/discount/tax/total) is derived server-side
-    from OrderLine rows at read time (see Order properties) — the client
-    never sends and can never dictate a total; it only chooses variant_ids,
-    quantities, and a discount selection.
+    Validates payload and creates an Order + OrderLines for the given
+    tenant (restaurant). Every dollar amount (subtotal/discount/tax/total)
+    is derived server-side from OrderLine rows at read time (see Order
+    properties) — the client never sends and can never dictate a total; it
+    only chooses variant_ids, quantities, and a discount selection.
 
     Idempotent on client_transaction_id when provided: a retried/duplicated
     submission (e.g. an offline order re-sent after a dropped sync response)
-    returns the existing order instead of creating a second one.
+    returns the existing order instead of creating a second one. The
+    idempotency lookup is scoped to this restaurant too, since
+    client_transaction_id is only unique per-device, and — while globally
+    unique in practice given the device-id-embedded format — a cross-tenant
+    match should never be trusted even if it somehow occurred.
 
     Returns (order, error_message, http_status). On success error_message is None.
     """
     client_transaction_id = (payload.get('client_transaction_id') or '').strip()[:64] or None
 
     if client_transaction_id:
-        existing = Order.objects.filter(client_transaction_id=client_transaction_id).first()
+        existing = Order.objects.filter(
+            restaurant=restaurant, client_transaction_id=client_transaction_id
+        ).first()
         if existing:
             return existing, None, 200
 
@@ -162,10 +176,13 @@ def _create_order_from_payload(payload, user):
 
     payment_method = 'cash'
 
-    restaurant = Restaurant.get_current()
-
     variant_ids = [entry.get('variant_id') for entry in items]
-    variants = ItemVariant.objects.filter(id__in=variant_ids).select_related('item')
+    # Scoped to this tenant's own categories — a variant_id belonging to
+    # another restaurant must be rejected exactly like one that doesn't
+    # exist at all, not silently sold.
+    variants = ItemVariant.objects.filter(
+        id__in=variant_ids, item__category__restaurant=restaurant
+    ).select_related('item')
     variant_map = {v.id: v for v in variants}
 
     lines_to_create = []
@@ -209,10 +226,27 @@ def _create_order_from_payload(payload, user):
             for line in lines_to_create:
                 line.order = order
             OrderLine.objects.bulk_create(lines_to_create)
+
+            # Deduct stock for every tracked variant sold. Never blocks the
+            # sale on insufficient stock — offline orders can't check live
+            # stock before completing, so the same rule applies uniformly
+            # online: the sale always goes through, and going negative is
+            # surfaced via the Inventory screen for the owner to reconcile,
+            # not prevented here.
+            for line in lines_to_create:
+                if line.variant and line.variant.track_stock:
+                    line.variant.record_movement(
+                        movement_type='sale',
+                        quantity_change=-line.quantity,
+                        order_line=line,
+                        user=user,
+                    )
     except IntegrityError:
         # Lost a race against a concurrent sync retry with the same
         # client_transaction_id — the other request already created it.
-        existing = Order.objects.filter(client_transaction_id=client_transaction_id).first()
+        existing = Order.objects.filter(
+            restaurant=restaurant, client_transaction_id=client_transaction_id
+        ).first()
         if existing:
             return existing, None, 200
         raise
@@ -237,9 +271,11 @@ def api_sync_order(request):
     if not client_transaction_id:
         return JsonResponse({'error': 'client_transaction_id is required for sync.'}, status=400)
 
-    already_existed = Order.objects.filter(client_transaction_id=client_transaction_id).exists()
+    already_existed = Order.objects.filter(
+        restaurant=request.restaurant, client_transaction_id=client_transaction_id
+    ).exists()
 
-    order, error, status_code = _create_order_from_payload(payload, request.user)
+    order, error, status_code = _create_order_from_payload(payload, request.restaurant, request.user)
     if error:
         return JsonResponse({
             'client_transaction_id': client_transaction_id,
@@ -259,7 +295,9 @@ def api_sync_order(request):
 @login_required
 @require_GET
 def api_order_detail(request, order_id):
-    order = get_object_or_404(Order.objects.prefetch_related('lines'), id=order_id)
+    order = get_object_or_404(
+        Order.objects.prefetch_related('lines'), id=order_id, restaurant=request.restaurant
+    )
     return JsonResponse({'order': _serialize_order(order)})
 
 
@@ -268,7 +306,8 @@ def api_order_detail(request, order_id):
 def api_orders_queue(request):
     """Active orders for the kitchen view."""
     orders = Order.objects.filter(
-        status__in=[Order.Status.PENDING, Order.Status.IN_PROGRESS]
+        restaurant=request.restaurant,
+        status__in=[Order.Status.PENDING, Order.Status.IN_PROGRESS],
     ).prefetch_related('lines')
     return JsonResponse({'orders': [_serialize_order(o) for o in orders]})
 
@@ -276,7 +315,7 @@ def api_orders_queue(request):
 @login_required
 @require_GET
 def api_orders_history(request):
-    orders = Order.objects.prefetch_related('lines')
+    orders = Order.objects.filter(restaurant=request.restaurant).prefetch_related('lines')
 
     status = request.GET.get('status')
     if status:
@@ -295,7 +334,7 @@ def api_orders_history(request):
 @login_required
 @require_POST
 def api_update_order_status(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    order = get_object_or_404(Order, id=order_id, restaurant=request.restaurant)
     try:
         payload = json.loads(request.body)
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -310,11 +349,13 @@ def api_update_order_status(request, order_id):
     return JsonResponse({'order': _serialize_order(order)})
 
 
-@login_required
+@owner_required
 @require_GET
 def api_dashboard_summary(request):
     today = timezone.localdate()
-    orders = Order.objects.filter(created_at__date=today).exclude(status=Order.Status.CANCELLED)
+    orders = Order.objects.filter(
+        restaurant=request.restaurant, created_at__date=today
+    ).exclude(status=Order.Status.CANCELLED)
 
     total_orders = orders.count()
     total_revenue = sum((o.total for o in orders), Decimal('0.00'))

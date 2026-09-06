@@ -74,11 +74,12 @@ $(function () {
         if (!cat) return;
         cat.items.forEach(function (item) {
             var $card = $('<div class="item-card"></div>');
+            var firstInStockVariant = item.variants.find(function (v) { return !v.is_out_of_stock; });
             if (item.image_url) {
                 var $img = $('<img class="item-image">').attr('src', item.image_url).attr('alt', item.name);
-                $img.attr('title', 'Add ' + item.name + (item.variants.length > 1 ? ' (' + item.variants[0].name + ')' : ''));
+                $img.attr('title', 'Add ' + item.name + (item.variants.length > 1 && firstInStockVariant ? ' (' + firstInStockVariant.name + ')' : ''));
                 $img.on('click', function () {
-                    if (item.variants.length) addToCart(item, item.variants[0]);
+                    if (firstInStockVariant) addToCart(item, firstInStockVariant);
                 });
                 $card.append($img);
             }
@@ -88,10 +89,15 @@ $(function () {
             }
             item.variants.forEach(function (variant) {
                 var label = variant.name + ' — ' + window.CURRENCY + variant.price;
+                if (variant.is_out_of_stock) label += ' (Out of stock)';
                 var $btn = $('<button type="button" class="variant-btn"></button>').text(label);
-                $btn.on('click', function () {
-                    addToCart(item, variant);
-                });
+                if (variant.is_out_of_stock) {
+                    $btn.addClass('variant-btn-disabled').prop('disabled', true);
+                } else {
+                    $btn.on('click', function () {
+                        addToCart(item, variant);
+                    });
+                }
                 $card.append($btn);
             });
             $grid.append($card);
@@ -269,7 +275,7 @@ $(function () {
         window.print();
     });
 
-    $('#new-order-btn').on('click', function () {
+    $('#new-order-btn, #receipt-close-btn').on('click', function () {
         $('#receipt-modal').hide();
     });
 

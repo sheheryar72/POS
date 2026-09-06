@@ -15,6 +15,7 @@ urlpatterns = [
 
     path('', include('orders.urls')),
     path('', include('menu.urls')),
+    path('', include('restaurants.urls')),
 ]
 
 if settings.DEBUG:

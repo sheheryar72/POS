@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}POS{% endblock %} — {{ restaurant.name }}</title>
 <link rel="manifest" href="{% static 'manifest.json' %}">
-<meta name="theme-color" content="#7a1414">
+<meta name="theme-color" content="#2563eb">
 <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}">
 <link rel="icon" href="{% static 'icons/icon-32.png' %}">
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -42,12 +42,22 @@
     <a href="{% url 'orders_history_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'orders_history_screen' %} active{% endif %}" title="History">
         <span class="sidebar-icon">📋</span><span class="sidebar-text">History</span>
     </a>
+    {% if request.user.profile.is_owner %}
     <a href="{% url 'dashboard_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'dashboard_screen' %} active{% endif %}" title="Dashboard">
         <span class="sidebar-icon">📊</span><span class="sidebar-text">Dashboard</span>
     </a>
     <a href="{% url 'menu_manage_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'menu_manage_screen' %} active{% endif %}" title="Manage Menu">
         <span class="sidebar-icon">🍽️</span><span class="sidebar-text">Manage Menu</span>
     </a>
+    {% if restaurant.plan.has_inventory %}
+    <a href="{% url 'inventory_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'inventory_screen' %} active{% endif %}" title="Inventory">
+        <span class="sidebar-icon">📦</span><span class="sidebar-text">Inventory</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'manage_users_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'manage_users_screen' %} active{% endif %}" title="Manage Users">
+        <span class="sidebar-icon">👥</span><span class="sidebar-text">Manage Users</span>
+    </a>
+    {% endif %}
 
     {% block sidebar_extra %}{% endblock %}
 

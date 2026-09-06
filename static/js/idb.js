@@ -181,6 +181,8 @@
                         item_id: item.id,
                         name: variant.name,
                         price: variant.price,
+                        track_stock: !!variant.track_stock,
+                        is_out_of_stock: !!variant.is_out_of_stock,
                     });
                 });
             });
@@ -221,7 +223,10 @@
                             description: item.description,
                             image_url: item.image_url,
                             variants: (variantsByItem[item.id] || []).map(function (v) {
-                                return { id: v.id, name: v.name, price: v.price };
+                                return {
+                                    id: v.id, name: v.name, price: v.price,
+                                    track_stock: v.track_stock, is_out_of_stock: v.is_out_of_stock,
+                                };
                             }),
                         };
                     }).filter(function (item) { return item.variants.length > 0; });

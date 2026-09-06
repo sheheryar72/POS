@@ -25,7 +25,7 @@
  *                       the service worker does not try to fake these responses.
  */
 
-const CACHE_VERSION = 'bb-pos-v1';
+const CACHE_VERSION = 'pos-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const MASTER_CACHE = `${CACHE_VERSION}-master`;
 
@@ -36,9 +36,10 @@ const STATIC_ASSETS = [
   '/static/js/history.js',
   '/static/js/dashboard.js',
   '/static/js/manage.js',
+  '/static/js/inventory.js',
+  '/static/js/manageUsers.js',
   '/static/js/idb.js',
   '/static/js/posSync.js',
-  '/static/images/login-bg.jpeg',
   '/static/manifest.json',
   '/static/icons/icon-16.png',
   '/static/icons/icon-32.png',

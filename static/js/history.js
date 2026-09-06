@@ -107,7 +107,7 @@ $(function () {
         return $r;
     }
 
-    $('#close-detail-btn').on('click', function () {
+    $('#close-detail-btn, #order-detail-close-x').on('click', function () {
         $('#order-detail-modal').hide();
     });
 

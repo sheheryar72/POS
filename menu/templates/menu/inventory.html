@@ -1,0 +1,98 @@
+{% extends 'orders/base.html' %}
+{% load static %}
+{% block title %}Inventory{% endblock %}
+{% block content %}
+<div class="pane-header">
+    <h2>Inventory</h2>
+</div>
+
+<div class="inventory-tabs">
+    <div class="inventory-tab active" data-tab="overview">Stock Overview</div>
+    <div class="inventory-tab" data-tab="adjust">Stock Adjustment</div>
+    <div class="inventory-tab" data-tab="history">Stock History</div>
+</div>
+
+<div id="tab-overview" class="inventory-tab-panel">
+    <div class="stat-cards">
+        <div class="stat-card">
+            <span class="stat-label">Tracked Items</span>
+            <span class="stat-value" id="stat-tracked-count">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Low Stock</span>
+            <span class="stat-value" id="stat-low-count">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Out of Stock</span>
+            <span class="stat-value" id="stat-out-count">-</span>
+        </div>
+    </div>
+
+    <h3>Out of Stock</h3>
+    <div class="table-scroll">
+        <table class="history-table">
+            <thead><tr><th>Category</th><th>Item</th><th>Variant</th><th>Stock</th><th>Threshold</th></tr></thead>
+            <tbody id="out-of-stock-body"></tbody>
+        </table>
+    </div>
+
+    <h3>Low Stock</h3>
+    <div class="table-scroll">
+        <table class="history-table">
+            <thead><tr><th>Category</th><th>Item</th><th>Variant</th><th>Stock</th><th>Threshold</th></tr></thead>
+            <tbody id="low-stock-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="tab-adjust" class="inventory-tab-panel" style="display:none">
+    <div class="adjust-form-card">
+        <label>Item / Variant</label>
+        <select id="adjust-variant-select"></select>
+
+        <label>Current Stock</label>
+        <div id="adjust-current-stock" class="current-stock-display">-</div>
+
+        <label>Movement Type</label>
+        <select id="adjust-type-select">
+            <option value="purchase">Purchase (stock in)</option>
+            <option value="adjustment">Adjustment (correction, +/-)</option>
+        </select>
+
+        <label id="adjust-quantity-label">Quantity</label>
+        <input type="number" id="adjust-quantity-input" placeholder="e.g. 20">
+        <p class="field-hint" id="adjust-quantity-hint">Enter how many units were purchased/received.</p>
+
+        <label>Note (optional)</label>
+        <input type="text" id="adjust-note-input" placeholder="e.g. Delivery from supplier">
+
+        <div id="adjust-error" class="error-text"></div>
+        <button id="adjust-submit-btn" class="primary-btn">Record Movement</button>
+    </div>
+</div>
+
+<div id="tab-history" class="inventory-tab-panel" style="display:none">
+    <div class="history-filters" style="margin-bottom: 16px;">
+        <label>Date <input type="date" id="history-filter-date"></label>
+        <label>Type
+            <select id="history-filter-type">
+                <option value="">All</option>
+                <option value="sale">Sale</option>
+                <option value="purchase">Purchase</option>
+                <option value="adjustment">Adjustment</option>
+            </select>
+        </label>
+    </div>
+    <div class="table-scroll">
+        <table class="history-table">
+            <thead>
+                <tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Resulting Stock</th><th>Note</th><th>By</th></tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/inventory.js' %}"></script>
+{% endblock %}

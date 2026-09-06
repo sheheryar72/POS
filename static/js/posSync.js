@@ -66,23 +66,30 @@
             return saveOrderOffline(payload, clientTransactionId);
         }
 
-        return ajax({
-            url: '/api/orders/place/',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(payload),
-        }).then(function (res) {
-            return { source: 'online', order: res.order };
-        }, function (xhr) {
-            // Network-level failure (not a validation error from the server)
-            // while we thought we were online — e.g. connection dropped
-            // mid-request. Fall back to the offline path rather than losing
-            // the order. A real server validation error (400) is NOT
-            // retried this way — it's surfaced to the caller as-is.
-            if (xhr.status === 0) {
-                return saveOrderOffline(payload, clientTransactionId);
-            }
-            return Promise.reject(xhr);
+        // Wrapped in Promise.resolve().then() so the value returned to the
+        // caller is always a genuine native Promise (supports .finally(),
+        // etc.) — jQuery's $.ajax() returns a jqXHR/Deferred which is
+        // thenable but does NOT implement .finally(), so chaining it
+        // directly onto callers that rely on Promise semantics breaks them.
+        return Promise.resolve().then(function () {
+            return ajax({
+                url: '/api/orders/place/',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+            }).then(function (res) {
+                return { source: 'online', order: res.order };
+            }, function (xhr) {
+                // Network-level failure (not a validation error from the server)
+                // while we thought we were online — e.g. connection dropped
+                // mid-request. Fall back to the offline path rather than losing
+                // the order. A real server validation error (400) is NOT
+                // retried this way — it's surfaced to the caller as-is.
+                if (xhr.status === 0) {
+                    return saveOrderOffline(payload, clientTransactionId);
+                }
+                return Promise.reject(xhr);
+            });
         });
     }
 

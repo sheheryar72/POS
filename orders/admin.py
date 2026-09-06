@@ -12,8 +12,9 @@ class OrderLineInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('invoice_number', 'order_type', 'status', 'total', 'created_at')
-    list_filter = ('status', 'order_type', 'created_at')
+    list_display = ('invoice_number', 'restaurant', 'order_type', 'status', 'total', 'created_at')
+    list_filter = ('restaurant', 'status', 'order_type', 'created_at')
     search_fields = ('invoice_number', 'customer_name', 'customer_phone')
     inlines = [OrderLineInline]
     readonly_fields = ('invoice_number', 'created_at', 'updated_at')
+    list_select_related = ('restaurant',)

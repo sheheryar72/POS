@@ -177,6 +177,18 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
     background: linear-gradient(160deg, rgba(90, 10, 10, 0.55), rgba(30, 5, 5, 0.8));
     z-index: 0;
 }
+/* Generic platform login (no client branding — shown before we know which
+   tenant is signing in, so it can't show any one restaurant's identity). */
+.login-body-generic {
+    background: linear-gradient(160deg, #1e293b, #0f172a);
+}
+.login-overlay-generic {
+    background: none;
+}
+.login-brand.login-brand-generic {
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
 .login-box {
     position: relative; z-index: 1;
     background: rgba(255, 255, 255, 0.14);
@@ -205,6 +217,7 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
     background: rgba(255,255,255,0.94); color: var(--text);
 }
 .login-box input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.login-body-generic .login-box input:focus { outline-color: #60a5fa; }
 .login-box .error-text { text-align: left; }
 .login-box button {
     margin-top: 26px; width: 100%; padding: 15px; background: var(--accent); color: #3a1d00;
@@ -212,6 +225,8 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
     letter-spacing: 0.02em;
 }
 .login-box button:hover { background: #ffd35c; }
+.login-body-generic .login-box button { background: #2563eb; color: #fff; }
+.login-body-generic .login-box button:hover { background: #1d4ed8; }
 
 .offline-mode-notice {
     background: rgba(245,158,11,0.15); color: #92400e; border: 1px solid rgba(245,158,11,0.35);
@@ -292,6 +307,10 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
     font-weight: 600; color: var(--primary-dark); transition: background 0.12s ease;
 }
 .item-card .variant-btn:hover { background: #fbd9c9; }
+.item-card .variant-btn-disabled,
+.item-card .variant-btn-disabled:hover {
+    background: var(--bg); color: var(--text-muted); cursor: not-allowed; text-decoration: line-through;
+}
 
 .order-meta { margin-bottom: 14px; }
 .order-meta label { display: block; font-size: 13px; color: var(--text-muted); margin-top: 10px; font-weight: 600; }
@@ -350,12 +369,20 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
 .modal {
     background: var(--surface); border-radius: var(--radius); padding: 26px; width: 420px;
     max-width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+    position: relative;
 }
 .modal h3 { font-size: 19px; margin-top: 0; }
+.modal-close-btn {
+    position: absolute; top: 14px; right: 14px; width: 30px; height: 30px;
+    border: none; background: var(--bg); color: var(--text-muted); border-radius: 50%;
+    font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; padding: 0; transition: background 0.12s ease, color 0.12s ease;
+}
+.modal-close-btn:hover { background: var(--border); color: var(--text); }
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
 .modal-actions button {
     flex: 1; padding: 13px; border-radius: var(--radius-sm); border: 1px solid var(--border);
-    background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600;
+    background: var(--surface); color: var(--text); cursor: pointer; font-size: 15px; font-weight: 600;
 }
 .modal-actions button:hover { background: var(--bg); }
 .modal-actions .primary-btn { border: none; width: auto; flex: 1; background: var(--success); color: #fff; }
@@ -420,6 +447,34 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
 .stat-label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 10px; font-weight: 600; }
 .stat-value { display: block; font-size: 30px; font-weight: 800; }
 
+/* Inventory */
+.inventory-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border);
+}
+.inventory-tab {
+    padding: 12px 18px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted);
+    border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color 0.12s ease;
+}
+.inventory-tab:hover { color: var(--text); }
+.inventory-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.inventory-tab-panel h3 { font-size: 15px; margin: 20px 0 10px; }
+.inventory-tab-panel .stat-cards { margin-bottom: 8px; }
+
+.adjust-form-card {
+    background: var(--surface); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow-sm);
+    max-width: 460px;
+}
+.adjust-form-card label { display: block; margin-top: 14px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.adjust-form-card select, .adjust-form-card input[type="text"], .adjust-form-card input[type="number"] {
+    width: 100%; padding: 10px; margin-top: 4px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+.current-stock-display {
+    font-size: 22px; font-weight: 800; margin-top: 4px; padding: 8px 0;
+}
+.field-hint { font-size: 12px; color: var(--text-muted); margin: 6px 0 0; }
+.adjust-form-card .primary-btn { margin-top: 20px; }
+
 /* Manage Menu */
 .manage-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
 .category-pane { background: var(--surface); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
@@ -474,10 +529,18 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
 .checkbox-label { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
 .checkbox-label input { width: auto; }
 
-.variant-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.variant-row-wrap { margin-top: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
+.variant-row-wrap:last-child { border-bottom: none; }
+.variant-row { display: flex; gap: 8px; align-items: center; }
 .variant-row input[type="text"] { flex: 2; margin-top: 0; }
 .variant-row input[type="number"] { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; }
 .variant-row .remove-variant { color: var(--danger); cursor: pointer; font-size: 16px; padding: 0 6px; }
+.variant-stock-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.variant-track-label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); font-weight: 500; white-space: nowrap; margin: 0; }
+.variant-track-label input { width: auto; margin: 0; }
+.variant-stock-row input[type="number"] {
+    flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; margin-top: 0;
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1200px) {

@@ -1,12 +1,12 @@
 {
-  "name": "Biryani Boss POS",
-  "short_name": "BB POS",
-  "description": "Point of sale for Biryani Boss — take orders, manage the kitchen queue, and track sales.",
+  "name": "POS System",
+  "short_name": "POS",
+  "description": "Point of sale — take orders, manage the kitchen queue, track sales and inventory.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f4f5f7",
-  "theme_color": "#7a1414",
+  "theme_color": "#2563eb",
   "orientation": "any",
   "icons": [
     { "src": "/static/icons/icon-16.png", "sizes": "16x16", "type": "image/png" },
