@@ -1,0 +1,86 @@
+{% extends 'orders/base.html' %}
+{% load static %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="pane-header">
+    <h2>Reports</h2>
+</div>
+
+<div class="history-filters" style="margin-bottom: 16px;">
+    <label>From <input type="date" id="report-start-date"></label>
+    <label>To <input type="date" id="report-end-date"></label>
+    <button id="report-apply-btn" class="primary-btn">Apply</button>
+</div>
+
+<div class="inventory-tabs">
+    <div class="inventory-tab active" data-tab="sales">Sales Summary</div>
+    <div class="inventory-tab" data-tab="top-items">Top-Selling Items</div>
+    <div class="inventory-tab" data-tab="stock">Stock Report</div>
+</div>
+
+<div id="tab-sales" class="inventory-tab-panel">
+    <div class="stat-cards">
+        <div class="stat-card">
+            <span class="stat-label">Total Orders</span>
+            <span class="stat-value" id="stat-total-orders">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Total Revenue</span>
+            <span class="stat-value" id="stat-total-revenue">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Average Order Value</span>
+            <span class="stat-value" id="stat-average-order">-</span>
+        </div>
+    </div>
+
+    <h3>Revenue By Day</h3>
+    <div class="table-scroll">
+        <table class="history-table">
+            <thead><tr><th>Date</th><th>Orders</th><th>Revenue</th></tr></thead>
+            <tbody id="sales-daily-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="tab-top-items" class="inventory-tab-panel" style="display:none">
+    <div class="table-scroll">
+        <table class="history-table">
+            <thead><tr><th>#</th><th>Item</th><th>Variant</th><th>Quantity Sold</th><th>Revenue</th></tr></thead>
+            <tbody id="top-items-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="tab-stock" class="inventory-tab-panel" style="display:none">
+    <div class="stat-cards">
+        <div class="stat-card">
+            <span class="stat-label">Tracked Items</span>
+            <span class="stat-value" id="stock-stat-tracked">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Low Stock</span>
+            <span class="stat-value" id="stock-stat-low">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Out of Stock</span>
+            <span class="stat-value" id="stock-stat-out">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Total Units In Stock</span>
+            <span class="stat-value" id="stock-stat-total-units">-</span>
+        </div>
+    </div>
+
+    <h3>Stock Movement (selected date range)</h3>
+    <div class="table-scroll">
+        <table class="history-table">
+            <thead><tr><th>Type</th><th>Net Change</th></tr></thead>
+            <tbody id="stock-movement-body"></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/reports.js' %}"></script>
+{% endblock %}

@@ -11,6 +11,7 @@ urlpatterns = [
     path('kitchen/', views.kitchen_screen, name='kitchen_screen'),
     path('history/', views.orders_history_screen, name='orders_history_screen'),
     path('dashboard/', views.dashboard_screen, name='dashboard_screen'),
+    path('reports/', views.reports_screen, name='reports_screen'),
 
     path('api/menu/', views.api_menu, name='api_menu'),
     path('api/orders/place/', views.api_place_order, name='api_place_order'),
@@ -20,4 +21,8 @@ urlpatterns = [
     path('api/orders/<int:order_id>/', views.api_order_detail, name='api_order_detail'),
     path('api/orders/<int:order_id>/status/', views.api_update_order_status, name='api_update_order_status'),
     path('api/dashboard/summary/', views.api_dashboard_summary, name='api_dashboard_summary'),
+
+    path('api/reports/sales-summary/', views.api_reports_sales_summary, name='api_reports_sales_summary'),
+    path('api/reports/top-items/', views.api_reports_top_items, name='api_reports_top_items'),
+    path('api/reports/stock/', views.api_reports_stock, name='api_reports_stock'),
 ]

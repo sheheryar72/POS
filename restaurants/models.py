@@ -24,6 +24,10 @@ class Plan(models.Model):
         default=False,
         help_text='Stock tracking, adjustments, and movement history (the Inventory screen).',
     )
+    has_reports = models.BooleanField(
+        default=False,
+        help_text='Sales summary, top-selling items, and stock reports (the Reports screen).',
+    )
 
     sort_order = models.PositiveIntegerField(default=0, help_text='Controls display order, e.g. in a pricing table.')
     is_active = models.BooleanField(default=True, help_text='Uncheck to retire a plan without deleting it (existing tenants keep it).')

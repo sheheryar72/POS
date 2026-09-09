@@ -25,7 +25,7 @@
  *                       the service worker does not try to fake these responses.
  */
 
-const CACHE_VERSION = 'pos-v3';
+const CACHE_VERSION = 'pos-v4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const MASTER_CACHE = `${CACHE_VERSION}-master`;
 
@@ -38,6 +38,7 @@ const STATIC_ASSETS = [
   '/static/js/manage.js',
   '/static/js/inventory.js',
   '/static/js/manageUsers.js',
+  '/static/js/reports.js',
   '/static/js/idb.js',
   '/static/js/posSync.js',
   '/static/manifest.json',

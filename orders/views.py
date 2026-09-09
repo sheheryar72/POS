@@ -9,8 +9,10 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from menu.models import Category, ItemVariant
-from restaurants.decorators import owner_required
+from django.db.models import Sum, F
+
+from menu.models import Category, ItemVariant, StockMovement
+from restaurants.decorators import owner_required, plan_required
 
 from .models import Order, OrderLine
 
@@ -370,4 +372,160 @@ def api_dashboard_summary(request):
         'pending_count': pending_count,
         'in_progress_count': in_progress_count,
         'completed_count': completed_count,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Reports: Sales Summary, Top-Selling Items, Stock Report (Premium only)
+# ---------------------------------------------------------------------------
+
+def _parse_report_date_range(request):
+    """
+    Shared by every report endpoint: reads ?start=YYYY-MM-DD&end=YYYY-MM-DD,
+    defaulting to the last 7 days (inclusive) when omitted. Returns
+    (start_date, end_date) as date objects, or None (with the error
+    JsonResponse already built) if the input is invalid.
+    """
+    today = timezone.localdate()
+    start_str = request.GET.get('start')
+    end_str = request.GET.get('end')
+
+    try:
+        start = timezone.datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else today - timezone.timedelta(days=6)
+        end = timezone.datetime.strptime(end_str, '%Y-%m-%d').date() if end_str else today
+    except ValueError:
+        return None, JsonResponse({'error': 'Dates must be in YYYY-MM-DD format.'}, status=400)
+
+    if start > end:
+        return None, JsonResponse({'error': '"start" must not be after "end".'}, status=400)
+
+    return (start, end), None
+
+
+@owner_required
+@plan_required('has_reports')
+def reports_screen(request):
+    return render(request, 'orders/reports.html', {'restaurant': request.restaurant})
+
+
+@owner_required
+@plan_required('has_reports')
+@require_GET
+def api_reports_sales_summary(request):
+    date_range, error = _parse_report_date_range(request)
+    if error:
+        return error
+    start, end = date_range
+
+    orders = Order.objects.filter(
+        restaurant=request.restaurant, created_at__date__gte=start, created_at__date__lte=end,
+    ).exclude(status=Order.Status.CANCELLED).prefetch_related('lines')
+
+    total_orders = orders.count()
+    total_revenue = sum((o.total for o in orders), Decimal('0.00'))
+    average_order_value = (total_revenue / total_orders).quantize(Decimal('0.01')) if total_orders else Decimal('0.00')
+
+    by_day = {}
+    for order in orders:
+        day = str(timezone.localtime(order.created_at).date())
+        bucket = by_day.setdefault(day, {'date': day, 'orders': 0, 'revenue': Decimal('0.00')})
+        bucket['orders'] += 1
+        bucket['revenue'] += order.total
+
+    daily = [
+        {'date': row['date'], 'orders': row['orders'], 'revenue': str(row['revenue'])}
+        for row in sorted(by_day.values(), key=lambda r: r['date'])
+    ]
+
+    return JsonResponse({
+        'start': str(start),
+        'end': str(end),
+        'total_orders': total_orders,
+        'total_revenue': str(total_revenue),
+        'average_order_value': str(average_order_value),
+        'daily': daily,
+    })
+
+
+@owner_required
+@plan_required('has_reports')
+@require_GET
+def api_reports_top_items(request):
+    date_range, error = _parse_report_date_range(request)
+    if error:
+        return error
+    start, end = date_range
+
+    lines = (
+        OrderLine.objects.filter(
+            order__restaurant=request.restaurant,
+            order__created_at__date__gte=start,
+            order__created_at__date__lte=end,
+        )
+        .exclude(order__status=Order.Status.CANCELLED)
+        .values('item_name', 'variant_name')
+        .annotate(
+            quantity_sold=Sum('quantity'),
+            revenue=Sum(F('unit_price') * F('quantity')),
+        )
+        .order_by('-revenue')[:20]
+    )
+
+    items = [
+        {
+            'item_name': row['item_name'],
+            'variant_name': row['variant_name'],
+            'quantity_sold': row['quantity_sold'],
+            'revenue': str(row['revenue']),
+        }
+        for row in lines
+    ]
+
+    return JsonResponse({'start': str(start), 'end': str(end), 'items': items})
+
+
+@owner_required
+@plan_required('has_reports')
+@require_GET
+def api_reports_stock(request):
+    """
+    Current stock snapshot (not date-ranged — "as of now") plus stock
+    movement totals over the requested date range, split by movement type.
+    Only meaningful for tenants with Inventory, but Reports and Inventory
+    are both Premium-only today so this is never reachable without it.
+    """
+    date_range, error = _parse_report_date_range(request)
+    if error:
+        return error
+    start, end = date_range
+
+    variants = ItemVariant.objects.filter(
+        track_stock=True, item__category__restaurant=request.restaurant
+    ).select_related('item', 'item__category')
+
+    tracked_count = variants.count()
+    out_of_stock_count = sum(1 for v in variants if v.is_out_of_stock)
+    low_stock_count = sum(1 for v in variants if v.is_low_stock)
+    total_units_in_stock = sum(v.stock_quantity for v in variants)
+
+    movements = StockMovement.objects.filter(
+        variant__item__category__restaurant=request.restaurant,
+        created_at__date__gte=start,
+        created_at__date__lte=end,
+    ).values('movement_type').annotate(total_change=Sum('quantity_change'))
+
+    movement_totals = {row['movement_type']: row['total_change'] for row in movements}
+
+    return JsonResponse({
+        'start': str(start),
+        'end': str(end),
+        'tracked_count': tracked_count,
+        'out_of_stock_count': out_of_stock_count,
+        'low_stock_count': low_stock_count,
+        'total_units_in_stock': total_units_in_stock,
+        'movement_totals': {
+            'sale': movement_totals.get(StockMovement.MovementType.SALE, 0),
+            'purchase': movement_totals.get(StockMovement.MovementType.PURCHASE, 0),
+            'adjustment': movement_totals.get(StockMovement.MovementType.ADJUSTMENT, 0),
+        },
     })

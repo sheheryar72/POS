@@ -54,6 +54,11 @@
         <span class="sidebar-icon">📦</span><span class="sidebar-text">Inventory</span>
     </a>
     {% endif %}
+    {% if restaurant.plan.has_reports %}
+    <a href="{% url 'reports_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'reports_screen' %} active{% endif %}" title="Reports">
+        <span class="sidebar-icon">📈</span><span class="sidebar-text">Reports</span>
+    </a>
+    {% endif %}
     <a href="{% url 'manage_users_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'manage_users_screen' %} active{% endif %}" title="Manage Users">
         <span class="sidebar-icon">👥</span><span class="sidebar-text">Manage Users</span>
     </a>

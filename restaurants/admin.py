@@ -13,7 +13,7 @@ class PlanAdmin(admin.ModelAdmin):
     Fully admin-managed pricing tiers — add/edit a plan and flip its feature
     flags here, no code changes needed. Restaurants → Plans → Add Plan.
     """
-    list_display = ('name', 'price', 'has_inventory', 'is_active', 'restaurant_count', 'sort_order')
+    list_display = ('name', 'price', 'has_inventory', 'has_reports', 'is_active', 'restaurant_count', 'sort_order')
     list_editable = ('sort_order', 'is_active')
 
     def restaurant_count(self, obj):
