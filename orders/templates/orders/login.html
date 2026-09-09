@@ -10,10 +10,10 @@
 <link rel="icon" href="{% static 'icons/icon-32.png' %}">
 <link rel="stylesheet" href="{% static 'css/pos.css' %}">
 </head>
-<body class="login-body login-body-generic">
-<div class="login-overlay login-overlay-generic"></div>
+<body class="login-body" style="background-image: url('{% static 'images/login-bg.jpeg' %}');">
+<div class="login-overlay"></div>
 <div class="login-box">
-    <div class="login-brand login-brand-generic">POS System</div>
+    <div class="login-brand">POS System</div>
     <div class="login-subtitle">Sign in to your restaurant</div>
     {% if form.errors %}
         <p class="error-text">Invalid username or password.</p>
