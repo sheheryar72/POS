@@ -4,7 +4,7 @@
  * Three distinct caching strategies (per app requirement, not a generic
  * PWA template):
  *
- *   1. STATIC_CACHE   — app shell (CSS/JS/icons/login background). Cache-first:
+ *   1. STATIC_CACHE  — app shell (CSS/JS/icons/login background). Cache-first:
  *                       these are versioned by CACHE_VERSION below and rarely
  *                       change at runtime, so serving from cache is safe and fast.
  *
