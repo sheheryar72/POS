@@ -65,9 +65,12 @@ if CLOUDINARY_URL:
     ]
 
 INSTALLED_APPS += [
+    'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'restaurants',
     'menu',
     'orders',
+    'mobileapi',
 ]
 
 MIDDLEWARE = [
@@ -77,7 +80,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'mobileapi.middleware.JWTUserMiddleware',
     'restaurants.middleware.TenantMiddleware',
+    'mobileapi.middleware.ApiJsonErrorMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -190,3 +195,25 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
+# Mobile app auth (JWT) — additive to the web POS's session/CSRF auth, see
+# mobileapi.middleware.JWTUserMiddleware. The web app never touches this.
+from datetime import timedelta  # noqa: E402
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}

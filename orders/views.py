@@ -72,7 +72,11 @@ def api_menu(request):
                 'id': item.id,
                 'name': item.name,
                 'description': item.description,
-                'image_url': item.image.url if item.image else '',
+                # Absolute, not relative — the web POS's <img> tags resolve a
+                # relative /media/... path against the page's own origin
+                # automatically, but a mobile client has no "current page"
+                # to resolve against, so it needs the full URL.
+                'image_url': request.build_absolute_uri(item.image.url) if item.image else '',
                 'variants': variants,
             })
         if items:

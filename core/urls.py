@@ -16,6 +16,9 @@ urlpatterns = [
     path('', include('orders.urls')),
     path('', include('menu.urls')),
     path('', include('restaurants.urls')),
+
+    # Mobile app JWT auth only — the web POS keeps using session/CSRF login.
+    path('api/auth/', include('mobileapi.urls')),
 ]
 
 if settings.DEBUG:
