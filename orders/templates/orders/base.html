@@ -84,6 +84,7 @@
     window.CURRENCY = "{{ restaurant.currency_symbol }}";
     window.TAX_PERCENT = "{{ restaurant.tax_percent }}";
     window.RESTAURANT_NAME_JS = "{{ restaurant.name|default:''|escapejs }}";
+    window.NO_ITEM_PHOTO_URL = "{% static 'images/no-item-photo.png' %}";
 </script>
 <script>
     $(function () {

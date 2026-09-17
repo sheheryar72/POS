@@ -299,6 +299,11 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
     background: var(--bg); cursor: pointer; transition: opacity 0.12s ease;
 }
 .item-card .item-image:hover { opacity: 0.88; }
+/* Placeholder ("no photo") images never crop, regardless of the card's
+   aspect ratio — only real uploaded photos should fill/crop the frame. */
+.item-card .item-image.no-photo,
+.manage-item-card img.no-photo,
+#item-image-preview.no-photo { object-fit: contain; }
 .item-card .item-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
 .item-card .item-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
 .item-card .variant-btn {

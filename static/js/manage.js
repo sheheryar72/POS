@@ -81,9 +81,11 @@ $(function () {
         currentItems.forEach(function (item) {
             var $card = $('<div class="manage-item-card"></div>');
             if (!item.is_available) $card.addClass('unavailable');
-            if (item.image_url) {
-                $card.append($('<img>').attr('src', item.image_url));
-            }
+            $card.append(
+                $('<img>')
+                    .attr('src', item.image_url || window.NO_ITEM_PHOTO_URL)
+                    .toggleClass('no-photo', !item.image_url)
+            );
             if (!item.is_available) {
                 $card.append('<span class="unavailable-badge">Hidden</span>');
             }
@@ -219,11 +221,11 @@ $(function () {
         $('#item-image-input').val('');
         $('#variant-rows').empty();
 
-        if (item && item.image_url) {
-            $('#item-image-preview').attr('src', item.image_url).show();
-        } else {
-            $('#item-image-preview').hide();
-        }
+        var hasPhoto = !!(item && item.image_url);
+        $('#item-image-preview')
+            .attr('src', (item && item.image_url) || window.NO_ITEM_PHOTO_URL)
+            .toggleClass('no-photo', !hasPhoto)
+            .show();
 
         if (item && item.variants.length) {
             item.variants.forEach(addVariantRow);

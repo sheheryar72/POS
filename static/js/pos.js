@@ -75,14 +75,15 @@ $(function () {
         cat.items.forEach(function (item) {
             var $card = $('<div class="item-card"></div>');
             var firstInStockVariant = item.variants.find(function (v) { return !v.is_out_of_stock; });
-            if (item.image_url) {
-                var $img = $('<img class="item-image">').attr('src', item.image_url).attr('alt', item.name);
-                $img.attr('title', 'Add ' + item.name + (item.variants.length > 1 && firstInStockVariant ? ' (' + firstInStockVariant.name + ')' : ''));
-                $img.on('click', function () {
-                    if (firstInStockVariant) addToCart(item, firstInStockVariant);
-                });
-                $card.append($img);
-            }
+            var $img = $('<img class="item-image">')
+                .attr('src', item.image_url || window.NO_ITEM_PHOTO_URL)
+                .attr('alt', item.name)
+                .toggleClass('no-photo', !item.image_url);
+            $img.attr('title', 'Add ' + item.name + (item.variants.length > 1 && firstInStockVariant ? ' (' + firstInStockVariant.name + ')' : ''));
+            $img.on('click', function () {
+                if (firstInStockVariant) addToCart(item, firstInStockVariant);
+            });
+            $card.append($img);
             $card.append($('<div class="item-name"></div>').text(item.name));
             if (item.description) {
                 $card.append($('<div class="item-desc"></div>').text(item.description));
