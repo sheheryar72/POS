@@ -10,6 +10,7 @@ from restaurants.models import Restaurant
 # adjacent pack sizes/brands where an exact current listing wasn't found;
 # still representative for demo purposes, not live inventory data.
 # Each entry: (category name, [(item name, [(variant name, price), ...]), ...])
+
 CATALOG = [
     ('Beverages', [
         ('Coca-Cola', [('1.5L Bottle', 190), ('500ml Bottle', 100)]),
