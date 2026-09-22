@@ -6,7 +6,8 @@ $(function () {
     }
 
     var today = new Date().toISOString().slice(0, 10);
-    $('#filter-date').val(today);
+    $('#filter-start').val(today);
+    $('#filter-end').val(today);
 
     function loadHistory() {
         if (!navigator.onLine) {
@@ -14,14 +15,16 @@ $(function () {
         }
 
         var params = {};
-        var date = $('#filter-date').val();
+        var start = $('#filter-start').val();
+        var end = $('#filter-end').val();
         var status = $('#filter-status').val();
-        if (date) params.date = date;
+        if (start) params.start = start;
+        if (end) params.end = end;
         if (status) params.status = status;
 
         ajax({ url: '/api/orders/history/', method: 'GET', data: params }).done(function (res) {
             $('#history-offline-note').hide();
-            mergeWithLocalPending(res.orders, date);
+            mergeWithLocalPending(res.orders, start, end);
         }).fail(function () {
             loadLocalOnly();
         });
@@ -29,20 +32,22 @@ $(function () {
 
     function loadLocalOnly() {
         $('#history-offline-note').show();
-        mergeWithLocalPending([], $('#filter-date').val());
+        mergeWithLocalPending([], $('#filter-start').val(), $('#filter-end').val());
     }
 
     // Orders still sitting in the local sync queue don't exist on the server
     // yet, so /api/orders/history/ can never return them — merge them in
-    // here so a cashier reviewing "today's orders" while offline (or right
+    // here so a cashier reviewing recent orders while offline (or right
     // after coming back online, before the sync engine has caught up) can
-    // still see everything that's actually happened on this device today.
-    function mergeWithLocalPending(serverOrders, dateFilter) {
+    // still see everything that's actually happened on this device in range.
+    function mergeWithLocalPending(serverOrders, startFilter, endFilter) {
         posDb.getAllOrders().then(function (localOrders) {
             var pending = localOrders.filter(function (o) {
                 if (o.status !== 'PENDING_SYNC' && o.status !== 'FAILED') return false;
-                if (!dateFilter) return true;
-                return (o.created_at || '').slice(0, 10) === dateFilter;
+                var day = (o.created_at || '').slice(0, 10);
+                if (startFilter && day < startFilter) return false;
+                if (endFilter && day > endFilter) return false;
+                return true;
             });
             renderTable(pending.concat(serverOrders));
         }).catch(function () {
@@ -111,7 +116,7 @@ $(function () {
         $('#order-detail-modal').hide();
     });
 
-    $('#filter-date, #filter-status').on('change', loadHistory);
+    $('#filter-start, #filter-end, #filter-status').on('change', loadHistory);
 
     window.addEventListener('online', loadHistory);
     window.addEventListener('offline', loadHistory);

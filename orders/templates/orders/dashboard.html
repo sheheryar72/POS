@@ -2,7 +2,18 @@
 {% load static %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<h2>Today's Summary</h2>
+<div class="history-header">
+    <h2 id="dashboard-title">Today's Summary</h2>
+    <div class="history-filters">
+        <label>Period
+            <select id="filter-period">
+                <option value="today">Today</option>
+                <option value="month">This Month</option>
+                <option value="all">All Time</option>
+            </select>
+        </label>
+    </div>
+</div>
 <div class="stat-cards">
     <div class="stat-card">
         <span class="stat-label">Total Orders</span>

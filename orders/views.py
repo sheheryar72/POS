@@ -214,6 +214,10 @@ def _create_order_from_payload(payload, restaurant, user):
                 restaurant=restaurant,
                 invoice_number=f'{restaurant.invoice_prefix}-{invoice_num:05d}',
                 client_transaction_id=client_transaction_id,
+                # No kitchen-prep workflow exists anymore to move an order
+                # out of pending, and payment is always immediate/cash — so
+                # every order is complete as soon as it's placed.
+                status=Order.Status.COMPLETED,
                 order_type=order_type,
                 customer_name=(payload.get('customer_name') or '')[:100],
                 customer_phone=(payload.get('customer_phone') or '')[:30],
@@ -305,6 +309,11 @@ def api_order_detail(request, order_id):
 @login_required
 @require_GET
 def api_orders_history(request):
+    """
+    Supports both a single ?date= (back-compat with existing web/mobile
+    clients) and a ?start=&end= range. When both start/end are omitted and
+    no date is given either, defaults to today — unchanged from before.
+    """
     orders = Order.objects.filter(restaurant=request.restaurant).prefetch_related('lines')
 
     status = request.GET.get('status')
@@ -312,22 +321,48 @@ def api_orders_history(request):
         orders = orders.filter(status=status)
 
     date_str = request.GET.get('date')
-    if date_str:
+    start_str = request.GET.get('start')
+    end_str = request.GET.get('end')
+
+    if start_str or end_str:
+        today = timezone.localdate()
+        try:
+            start = timezone.datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else today
+            end = timezone.datetime.strptime(end_str, '%Y-%m-%d').date() if end_str else today
+        except ValueError:
+            return JsonResponse({'error': 'Dates must be in YYYY-MM-DD format.'}, status=400)
+        if start > end:
+            return JsonResponse({'error': '"start" must not be after "end".'}, status=400)
+        orders = orders.filter(created_at__date__gte=start, created_at__date__lte=end)
+    elif date_str:
         orders = orders.filter(created_at__date=date_str)
     else:
         orders = orders.filter(created_at__date=timezone.localdate())
 
-    orders = orders[:200]
+    orders = orders.order_by('-created_at')[:200]
     return JsonResponse({'orders': [_serialize_order(o) for o in orders]})
 
 
 @owner_required
 @require_GET
 def api_dashboard_summary(request):
+    """
+    ?period=today (default) | month | all. "today"/"month" are relative to
+    the server's local date, matching the existing Reports screen convention.
+    """
+    period = request.GET.get('period', 'today')
     today = timezone.localdate()
-    orders = Order.objects.filter(
-        restaurant=request.restaurant, created_at__date=today
-    ).exclude(status=Order.Status.CANCELLED)
+
+    orders = Order.objects.filter(restaurant=request.restaurant)
+    if period == 'month':
+        orders = orders.filter(created_at__year=today.year, created_at__month=today.month)
+    elif period == 'all':
+        pass
+    else:
+        period = 'today'
+        orders = orders.filter(created_at__date=today)
+
+    orders = orders.exclude(status=Order.Status.CANCELLED)
 
     total_orders = orders.count()
     total_revenue = sum((o.total for o in orders), Decimal('0.00'))
@@ -336,6 +371,7 @@ def api_dashboard_summary(request):
     completed_count = orders.filter(status=Order.Status.COMPLETED).count()
 
     return JsonResponse({
+        'period': period,
         'date': str(today),
         'total_orders': total_orders,
         'total_revenue': str(total_revenue),
