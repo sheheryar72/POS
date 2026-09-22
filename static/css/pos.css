@@ -407,10 +407,13 @@ body.sidebar-collapsed .content-with-sidebar { margin-left: var(--sidebar-w-coll
 
 /* History */
 .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
-.history-filters { display: flex; gap: 18px; flex-wrap: wrap; }
+.history-filters { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .history-filters label { font-size: 14px; color: var(--text-muted); font-weight: 600; }
 .history-filters input, .history-filters select {
     margin-left: 8px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px;
+}
+.history-filters .primary-btn {
+    width: auto; padding: 9px 20px; font-size: 14px;
 }
 .table-scroll { overflow-x: auto; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
 .history-table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 600px; }
