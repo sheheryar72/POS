@@ -5,7 +5,16 @@ $(function () {
         return $.ajax(opts);
     }
 
-    var today = new Date().toISOString().slice(0, 10);
+    // NOT toISOString() — that's UTC, and the server filters by local
+    // (Asia/Karachi) date, so near midnight UTC-based slicing picks the
+    // wrong day and the default range silently misses today's orders.
+    function localToday() {
+        var d = new Date();
+        var month = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return d.getFullYear() + '-' + month + '-' + day;
+    }
+    var today = localToday();
     $('#filter-start').val(today);
     $('#filter-end').val(today);
 
@@ -116,7 +125,7 @@ $(function () {
         $('#order-detail-modal').hide();
     });
 
-    $('#filter-start, #filter-end, #filter-status').on('change', loadHistory);
+    $('#apply-filters-btn').on('click', loadHistory);
 
     window.addEventListener('online', loadHistory);
     window.addEventListener('offline', loadHistory);

@@ -19,7 +19,7 @@ $(function () {
         });
     }
 
-    $('#filter-period').on('change', loadSummary);
+    $('#apply-period-btn').on('click', loadSummary);
 
     loadSummary();
     setInterval(loadSummary, 20000);

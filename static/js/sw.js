@@ -25,7 +25,7 @@
  *                       the service worker does not try to fake these responses.
  */
 
-const CACHE_VERSION = 'pos-v5';
+const CACHE_VERSION = 'pos-v6';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const MASTER_CACHE = `${CACHE_VERSION}-master`;
 
