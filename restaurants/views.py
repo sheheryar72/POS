@@ -7,13 +7,14 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 
-from .decorators import owner_required
+from .decorators import owner_required, plan_required
 from .models import UserProfile
 
 User = get_user_model()
 
 
 @owner_required
+@plan_required('has_manage_users')
 def manage_users_screen(request):
     return render(request, 'restaurants/manage_users.html')
 
@@ -32,6 +33,7 @@ def _serialize_user(user):
 
 
 @owner_required
+@plan_required('has_manage_users')
 def api_manage_users(request):
     if request.method == 'GET':
         users = (
@@ -83,6 +85,7 @@ def api_manage_users(request):
 
 
 @owner_required
+@plan_required('has_manage_users')
 @require_http_methods(['POST', 'DELETE'])
 def api_manage_user_detail(request, user_id):
     user = get_object_or_404(
