@@ -36,9 +36,11 @@
     <a href="{% url 'pos_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'pos_screen' %} active{% endif %}" title="New Order">
         <span class="sidebar-icon">🧾</span><span class="sidebar-text">New Order</span>
     </a>
+    {% if restaurant.plan.has_kitchen %}
     <a href="{% url 'kitchen_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'kitchen_screen' %} active{% endif %}" title="Kitchen">
         <span class="sidebar-icon">🍳</span><span class="sidebar-text">Kitchen</span>
     </a>
+    {% endif %}
     <a href="{% url 'orders_history_screen' %}" class="sidebar-link{% if request.resolver_match.url_name == 'orders_history_screen' %} active{% endif %}" title="History">
         <span class="sidebar-icon">📋</span><span class="sidebar-text">History</span>
     </a>

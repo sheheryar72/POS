@@ -15,11 +15,10 @@ class Plan(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     description = models.CharField(max_length=255, blank=True)
 
-    # Core order-taking (New Order, Kitchen, History, Dashboard, Manage
-    # Menu, Manage Users) is available on every plan — it's the product,
-    # not an upsell — so there's no flag for it here. Offline order-taking
-    # is likewise ungated on every plan (core reliability, not a premium
-    # feature). Inventory is the first real plan-gated feature:
+    # Core order-taking (New Order, History, Dashboard, Manage Menu, Manage
+    # Users) is available on every plan — it's the product, not an upsell —
+    # so there's no flag for it here. Offline order-taking is likewise
+    # ungated on every plan (core reliability, not a premium feature).
     has_inventory = models.BooleanField(
         default=False,
         help_text='Stock tracking, adjustments, and movement history (the Inventory screen).',
@@ -27,6 +26,11 @@ class Plan(models.Model):
     has_reports = models.BooleanField(
         default=False,
         help_text='Sales summary, top-selling items, and stock reports (the Reports screen).',
+    )
+    has_kitchen = models.BooleanField(
+        default=False,
+        help_text='Kitchen order queue screen (web and mobile). Off by default — a retail/mart '
+                   'tenant has no use for it; a restaurant tenant buys it as a premium feature.',
     )
 
     sort_order = models.PositiveIntegerField(default=0, help_text='Controls display order, e.g. in a pricing table.')

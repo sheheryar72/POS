@@ -26,7 +26,7 @@ def pos_screen(request):
     return render(request, 'orders/pos.html', {'restaurant': request.restaurant})
 
 
-@login_required
+@plan_required('has_kitchen')
 def kitchen_screen(request):
     return render(request, 'orders/kitchen.html', {'restaurant': request.restaurant})
 
@@ -307,7 +307,7 @@ def api_order_detail(request, order_id):
     return JsonResponse({'order': _serialize_order(order)})
 
 
-@login_required
+@plan_required('has_kitchen')
 @require_GET
 def api_orders_queue(request):
     """Active orders for the kitchen view."""
