@@ -14,8 +14,8 @@
  *                       menu, but if offline, serve the last-known-good copy
  *                       so the cashier can still take orders.
  *
- *   3. Never cached    — everything else: order placement/sync, kitchen queue,
- *                       history, dashboard, manage-menu CRUD, auth, and the
+ *   3. Never cached    — everything else: order placement/sync, history,
+ *                       dashboard, manage-menu CRUD, auth, and the
  *                       HTML pages themselves. These are transactional or
  *                       user/session-specific; serving a stale or
  *                       cross-session cached copy would be a correctness and
@@ -25,14 +25,13 @@
  *                       the service worker does not try to fake these responses.
  */
 
-const CACHE_VERSION = 'pos-v4';
+const CACHE_VERSION = 'pos-v5';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const MASTER_CACHE = `${CACHE_VERSION}-master`;
 
 const STATIC_ASSETS = [
   '/static/css/pos.css',
   '/static/js/pos.js',
-  '/static/js/kitchen.js',
   '/static/js/history.js',
   '/static/js/dashboard.js',
   '/static/js/manage.js',

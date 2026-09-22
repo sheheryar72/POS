@@ -27,11 +27,6 @@ class Plan(models.Model):
         default=False,
         help_text='Sales summary, top-selling items, and stock reports (the Reports screen).',
     )
-    has_kitchen = models.BooleanField(
-        default=False,
-        help_text='Kitchen order queue screen (web and mobile). Off by default — a retail/mart '
-                   'tenant has no use for it; a restaurant tenant buys it as a premium feature.',
-    )
 
     sort_order = models.PositiveIntegerField(default=0, help_text='Controls display order, e.g. in a pricing table.')
     is_active = models.BooleanField(default=True, help_text='Uncheck to retire a plan without deleting it (existing tenants keep it).')

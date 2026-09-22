@@ -26,11 +26,6 @@ def pos_screen(request):
     return render(request, 'orders/pos.html', {'restaurant': request.restaurant})
 
 
-@plan_required('has_kitchen')
-def kitchen_screen(request):
-    return render(request, 'orders/kitchen.html', {'restaurant': request.restaurant})
-
-
 @login_required
 def orders_history_screen(request):
     return render(request, 'orders/history.html', {'restaurant': request.restaurant})
@@ -307,17 +302,6 @@ def api_order_detail(request, order_id):
     return JsonResponse({'order': _serialize_order(order)})
 
 
-@plan_required('has_kitchen')
-@require_GET
-def api_orders_queue(request):
-    """Active orders for the kitchen view."""
-    orders = Order.objects.filter(
-        restaurant=request.restaurant,
-        status__in=[Order.Status.PENDING, Order.Status.IN_PROGRESS],
-    ).prefetch_related('lines')
-    return JsonResponse({'orders': [_serialize_order(o) for o in orders]})
-
-
 @login_required
 @require_GET
 def api_orders_history(request):
@@ -335,24 +319,6 @@ def api_orders_history(request):
 
     orders = orders[:200]
     return JsonResponse({'orders': [_serialize_order(o) for o in orders]})
-
-
-@login_required
-@require_POST
-def api_update_order_status(request, order_id):
-    order = get_object_or_404(Order, id=order_id, restaurant=request.restaurant)
-    try:
-        payload = json.loads(request.body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({'error': 'Invalid request body.'}, status=400)
-
-    new_status = payload.get('status')
-    if new_status not in Order.Status.values:
-        return JsonResponse({'error': 'Invalid status.'}, status=400)
-
-    order.status = new_status
-    order.save(update_fields=['status', 'updated_at'])
-    return JsonResponse({'order': _serialize_order(order)})
 
 
 @owner_required

@@ -35,7 +35,6 @@ def current_user(request):
             'receipt_footer_note': restaurant.receipt_footer_note,
             'has_inventory': restaurant.has_feature('has_inventory'),
             'has_reports': restaurant.has_feature('has_reports'),
-            'has_kitchen': restaurant.has_feature('has_kitchen'),
         },
     })
 

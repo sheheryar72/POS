@@ -5,7 +5,7 @@
  *   - device_id: a stable per-browser identifier (localStorage), used to
  *     build globally-unique client_transaction_ids.
  *   - posRequest(): a thin routing layer over the existing jQuery $.ajax
- *     calls already used by pos.js/kitchen.js/etc. It does NOT replace those
+ *     calls already used by pos.js/history.js/etc. It does NOT replace those
  *     calls — order placement specifically is offline-aware; everything
  *     else keeps calling $.ajax directly, unchanged.
  *   - Sync engine: FIFO drain of the pending_sync queue whenever the browser
